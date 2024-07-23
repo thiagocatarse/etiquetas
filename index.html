@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shipping Label Generator</title>
-    <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
         .container { max-width: 600px; margin: auto; }
         h1 { text-align: center; }
         #file-input { margin: 20px 0; }
         #generate-btn { display: block; margin: 20px auto; padding: 10px 20px; }
+        #status { text-align: center; color: #666; font-style: italic; }
     </style>
 </head>
 <body>
@@ -19,27 +18,69 @@
         <h1>Shipping Label Generator</h1>
         <input type="file" id="file-input" accept=".csv">
         <button id="generate-btn">Generate Labels</button>
+        <p id="status"></p>
     </div>
 
     <script>
+    function loadScript(url, callback) {
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = url;
+        script.onload = callback;
+        document.head.appendChild(script);
+    }
+
+    loadScript('https://unpkg.com/papaparse@latest/papaparse.min.js', function() {
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', initApp);
+    });
+
+    function initApp() {
         const fileInput = document.getElementById('file-input');
         const generateBtn = document.getElementById('generate-btn');
+        const statusElement = document.getElementById('status');
+
+        let processedData = null;
+        let inactivityTimer;
+        const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
         generateBtn.addEventListener('click', generateLabels);
+
+        // Set up event listeners for automatic clearing
+        window.addEventListener('beforeunload', clearData);
+        document.addEventListener('mousemove', resetInactivityTimer);
+        document.addEventListener('keypress', resetInactivityTimer);
 
         function generateLabels() {
             const file = fileInput.files[0];
             if (!file) {
-                alert('Please select a CSV file first.');
+                setStatus('Please select a CSV file first.', 'error');
                 return;
             }
 
             Papa.parse(file, {
                 complete: function(results) {
-                    const backers = processCSV(results.data);
-                    generatePDF(backers);
+                    if (validateCSV(results.data)) {
+                        processedData = processCSV(results.data);
+                        generatePDF(processedData);
+                        // Clear data after PDF generation
+                        setTimeout(() => {
+                            clearData();
+                            setStatus('Labels generated and data cleared.', 'success');
+                        }, 1000);
+                    } else {
+                        setStatus('Invalid CSV format. Please check your file and try again.', 'error');
+                    }
                 }
             });
+        }
+
+        function validateCSV(data) {
+            if (data.length < 2) return false; // At least header row and one data row
+
+            const requiredHeaders = ['Nome completo', 'Rua', 'Número', 'Complemento', 'Bairro', 'Cidade', 'Estado', 'País', 'CEP', 'Telefone', 'Envio', 'Título da recompensa'];
+            const headers = data[0];
+
+            return requiredHeaders.every(header => headers.includes(header));
         }
 
         function processCSV(data) {
@@ -47,7 +88,7 @@
             return data.slice(1).map(row => {
                 const backer = {};
                 headers.forEach((header, index) => {
-                    backer[header] = row[index];
+                    backer[header] = row[index] ? row[index].trim() : '';
                 });
                 backer.address = `${backer['Rua']} ${backer['Número']} ${backer['Complemento']} - ${backer['Bairro']} - ${backer['Cidade']} - ${backer['Estado']} - ${backer['País']} - CEP ${backer['CEP']}`;
                 return backer;
@@ -116,6 +157,33 @@
 
             return lines;
         }
+
+        function clearData() {
+            fileInput.value = '';
+            processedData = null;
+            // Force garbage collection for browsers that support it
+            if (window.gc) {
+                window.gc();
+            }
+            console.log('Data has been cleared from memory.');
+        }
+
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                clearData();
+                setStatus('Data cleared due to inactivity.', 'info');
+            }, INACTIVITY_TIMEOUT);
+        }
+
+        function setStatus(message, type) {
+            statusElement.textContent = message;
+            statusElement.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : '#666';
+        }
+
+        // Initial setup of inactivity timer
+        resetInactivityTimer();
+    }
     </script>
 </body>
 </html>
