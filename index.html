@@ -85,7 +85,7 @@
                 return;
             }
 
-            fetch(`templates/${templateId}.json`)
+            fetch(`TEMPLATES/${templateId}.json`)
                 .then(response => response.json())
                 .then(data => {
                     selectedTemplate = data;
@@ -128,7 +128,7 @@
         function validateCSV(data) {
             if (data.length < 2) return false; // At least header row and one data row
 
-            const requiredHeaders = ['Nome completo', 'Rua', 'Número', 'Complemento', 'Bairro', 'Cidade', 'Estado', 'País', 'CEP', 'Telefone', 'Envio', 'Título da recompensa'];
+            const requiredHeaders = ['Nome completo', 'Rua', 'Número', 'Complemento', 'Bairro', 'Cidade', 'Estado', 'País', 'CEP', 'Título da recompensa'];
             const headers = data[0];
 
             return requiredHeaders.every(header => headers.includes(header));
@@ -161,6 +161,7 @@
             const labelWidth = parseFloat(template.tag.width);
             const labelHeight = parseFloat(template.tag.height);
             const labelsPerLine = parseInt(template.page.columns);
+            const fontSize = parseFloat(template.page['font-size']);
 
             backers.forEach((backer, i) => {
                 if (i > 0 && i % (labelsPerLine * Math.floor((pageHeight - 2 * marginTop) / labelHeight)) === 0) {
@@ -177,16 +178,18 @@
                     doc.rect(x, y, labelWidth, labelHeight);
                 }
 
-                doc.setFontSize(parseFloat(template.page['font-size']));
-                doc.text(`Nome: ${backer['Nome completo']}`, x + 2, y + 5);
+                doc.setFontSize(fontSize);
+                
+                let yOffset = 5;
+                doc.text(`Nome: ${backer['Nome completo']}`, x + 2, y + yOffset);
+                yOffset += fontSize / 2;
 
-                const addressLines = splitText(backer.address, 40);
-                addressLines.forEach((line, j) => {
-                    doc.text(line, x + 2, y + 10 + j * 4);
+                const addressLines = splitText(backer.address, Math.floor(labelWidth / (fontSize * 0.6)));
+                addressLines.forEach((line) => {
+                    doc.text(line, x + 2, y + yOffset);
+                    yOffset += fontSize / 2;
                 });
 
-                doc.text(`Telefone: ${backer['Telefone']}`, x + 2, y + labelHeight - 15);
-                doc.text(`Envio: ${backer['Envio']}`, x + 2, y + labelHeight - 10);
                 doc.text(`Recompensa: ${backer['Título da recompensa']}`, x + 2, y + labelHeight - 5);
             });
 
