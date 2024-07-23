@@ -85,7 +85,7 @@
                 return;
             }
 
-            fetch(`TEMPLATES/${templateId}.json`)
+            fetch(`templates/${templateId}.json`)
                 .then(response => response.json())
                 .then(data => {
                     selectedTemplate = data;
