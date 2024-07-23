@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipping Label Generator</title>
+    <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: auto; }
+        h1 { text-align: center; }
+        #file-input { margin: 20px 0; }
+        #generate-btn { display: block; margin: 20px auto; padding: 10px 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Shipping Label Generator</h1>
+        <input type="file" id="file-input" accept=".csv">
+        <button id="generate-btn">Generate Labels</button>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const generateBtn = document.getElementById('generate-btn');
+
+        generateBtn.addEventListener('click', generateLabels);
+
+        function generateLabels() {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a CSV file first.');
+                return;
+            }
+
+            Papa.parse(file, {
+                complete: function(results) {
+                    const backers = processCSV(results.data);
+                    generatePDF(backers);
+                }
+            });
+        }
+
+        function processCSV(data) {
+            const headers = data[0];
+            return data.slice(1).map(row => {
+                const backer = {};
+                headers.forEach((header, index) => {
+                    backer[header] = row[index];
+                });
+                backer.address = `${backer['Rua']} ${backer['Número']} ${backer['Complemento']} - ${backer['Bairro']} - ${backer['Cidade']} - ${backer['Estado']} - ${backer['País']} - CEP ${backer['CEP']}`;
+                return backer;
+            });
+        }
+
+        function generatePDF(backers) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const marginTop = 9;
+            const marginHorizontal = 4.7;
+            const labelHeight = 55.8;
+            const labelWidth = 99;
+            const labelsPerLine = 2;
+            const linesPerPage = 5;
+
+            backers.forEach((backer, i) => {
+                if (i > 0 && i % (labelsPerLine * linesPerPage) === 0) {
+                    doc.addPage();
+                }
+
+                const row = Math.floor((i % (labelsPerLine * linesPerPage)) / labelsPerLine);
+                const col = i % labelsPerLine;
+
+                const x = marginHorizontal + col * labelWidth;
+                const y = marginTop + row * labelHeight;
+
+                doc.rect(x, y, labelWidth, labelHeight);
+
+                doc.setFontSize(8);
+                doc.text(`Nome: ${backer['Nome completo']}`, x + 2, y + 5);
+
+                const addressLines = splitText(backer.address, 40);
+                addressLines.forEach((line, j) => {
+                    doc.text(line, x + 2, y + 10 + j * 4);
+                });
+
+                doc.text(`Telefone: ${backer['Telefone']}`, x + 2, y + labelHeight - 15);
+                doc.text(`Envio: ${backer['Envio']}`, x + 2, y + labelHeight - 10);
+                doc.text(`Recompensa: ${backer['Título da recompensa']}`, x + 2, y + labelHeight - 5);
+            });
+
+            doc.save('shipping_labels.pdf');
+        }
+
+        function splitText(text, maxChars) {
+            const words = text.split(' ');
+            const lines = [];
+            let currentLine = '';
+
+            words.forEach(word => {
+                if ((currentLine + word).length <= maxChars) {
+                    currentLine += (currentLine ? ' ' : '') + word;
+                } else {
+                    lines.push(currentLine);
+                    currentLine = word;
+                }
+            });
+
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+
+            return lines;
+        }
+    </script>
+</body>
+</html>
