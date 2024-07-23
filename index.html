@@ -8,7 +8,7 @@
         body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
         .container { max-width: 600px; margin: auto; }
         h1 { text-align: center; }
-        #file-input { margin: 20px 0; }
+        #file-input, #template-select { margin: 20px 0; width: 100%; }
         #generate-btn { display: block; margin: 20px auto; padding: 10px 20px; }
         #status { text-align: center; color: #666; font-style: italic; }
     </style>
@@ -16,6 +16,9 @@
 <body>
     <div class="container">
         <h1>Shipping Label Generator</h1>
+        <select id="template-select">
+            <option value="">Select a template...</option>
+        </select>
         <input type="file" id="file-input" accept=".csv">
         <button id="generate-btn">Generate Labels</button>
         <p id="status"></p>
@@ -36,24 +39,73 @@
 
     function initApp() {
         const fileInput = document.getElementById('file-input');
+        const templateSelect = document.getElementById('template-select');
         const generateBtn = document.getElementById('generate-btn');
         const statusElement = document.getElementById('status');
 
         let processedData = null;
+        let selectedTemplate = null;
         let inactivityTimer;
         const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
+        const templates = [
+            "3080", "3081", "3082", "3180", "3181", "3182", "5580A", "5580M", "5580V", "6080",
+            "6081", "6082", "6083", "6084", "6085", "6086", "6087", "6088", "6089", "6092",
+            "6093", "6094", "6095", "6180", "6181", "6182", "6183", "6184", "6185", "6187",
+            "6280", "6281", "6282", "6283", "6284", "6285", "6286", "6287", "6288", "6293",
+            "7088", "7089", "7188", "8096", "8098", "8099F", "8099L", "8196", "8296", "62580",
+            "62581", "62582", "A4048", "A4049", "A4050", "A4051", "A4054", "A4054R", "A4055",
+            "A4056", "A4056R", "A4060", "A4062", "A4063", "A4063R", "A4067", "A4248", "A4249",
+            "A4250", "A4251", "A4254", "A4255", "A4256", "A4260", "A4261", "A4262", "A4263",
+            "A4264", "A4265", "A4267", "A4268", "A4348", "A4349", "A4350", "A4351", "A4354",
+            "A4355", "A4356", "A4360", "A4361", "A4362", "A4363", "A4364", "A4365", "A4367",
+            "A4368", "BOOP100x40"
+        ];
+
+        // Populate template select options
+        templates.forEach(template => {
+            const option = document.createElement('option');
+            option.value = template;
+            option.textContent = template;
+            templateSelect.appendChild(option);
+        });
+
         generateBtn.addEventListener('click', generateLabels);
+        templateSelect.addEventListener('change', loadTemplate);
 
         // Set up event listeners for automatic clearing
         window.addEventListener('beforeunload', clearData);
         document.addEventListener('mousemove', resetInactivityTimer);
         document.addEventListener('keypress', resetInactivityTimer);
 
+        function loadTemplate() {
+            const templateId = templateSelect.value;
+            if (!templateId) {
+                setStatus('Please select a template.', 'error');
+                return;
+            }
+
+            fetch(`TEMPLATES/${templateId}.json`)
+                .then(response => response.json())
+                .then(data => {
+                    selectedTemplate = data;
+                    setStatus('Template loaded successfully.', 'success');
+                })
+                .catch(error => {
+                    console.error('Error loading template:', error);
+                    setStatus('Error loading template. Please try again.', 'error');
+                });
+        }
+
         function generateLabels() {
+            if (!selectedTemplate) {
+                setStatus('Please select a template first.', 'error');
+                return;
+            }
+
             const file = fileInput.files[0];
             if (!file) {
-                setStatus('Please select a CSV file first.', 'error');
+                setStatus('Please select a CSV file.', 'error');
                 return;
             }
 
@@ -61,8 +113,7 @@
                 complete: function(results) {
                     if (validateCSV(results.data)) {
                         processedData = processCSV(results.data);
-                        generatePDF(processedData);
-                        // Clear data after PDF generation
+                        generatePDF(processedData, selectedTemplate);
                         setTimeout(() => {
                             clearData();
                             setStatus('Labels generated and data cleared.', 'success');
@@ -95,33 +146,38 @@
             });
         }
 
-        function generatePDF(backers) {
+        function generatePDF(backers, template) {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const doc = new jsPDF({
+                orientation: template.page.orientation,
+                unit: template.page.unit,
+                format: template.page.size
+            });
 
-            const pageWidth = 210;
-            const pageHeight = 297;
-            const marginTop = 9;
-            const marginHorizontal = 4.7;
-            const labelHeight = 55.8;
-            const labelWidth = 99;
-            const labelsPerLine = 2;
-            const linesPerPage = 5;
+            const pageWidth = parseFloat(template.page.size[0]);
+            const pageHeight = parseFloat(template.page.size[1]);
+            const marginTop = parseFloat(template.page['margin-top']);
+            const marginLeft = parseFloat(template.page['margin-left']);
+            const labelWidth = parseFloat(template.tag.width);
+            const labelHeight = parseFloat(template.tag.height);
+            const labelsPerLine = parseInt(template.page.columns);
 
             backers.forEach((backer, i) => {
-                if (i > 0 && i % (labelsPerLine * linesPerPage) === 0) {
+                if (i > 0 && i % (labelsPerLine * Math.floor((pageHeight - 2 * marginTop) / labelHeight)) === 0) {
                     doc.addPage();
                 }
 
-                const row = Math.floor((i % (labelsPerLine * linesPerPage)) / labelsPerLine);
+                const row = Math.floor((i % (labelsPerLine * Math.floor((pageHeight - 2 * marginTop) / labelHeight))) / labelsPerLine);
                 const col = i % labelsPerLine;
 
-                const x = marginHorizontal + col * labelWidth;
+                const x = marginLeft + col * labelWidth;
                 const y = marginTop + row * labelHeight;
 
-                doc.rect(x, y, labelWidth, labelHeight);
+                if (template.tag.border !== "0") {
+                    doc.rect(x, y, labelWidth, labelHeight);
+                }
 
-                doc.setFontSize(8);
+                doc.setFontSize(parseFloat(template.page['font-size']));
                 doc.text(`Nome: ${backer['Nome completo']}`, x + 2, y + 5);
 
                 const addressLines = splitText(backer.address, 40);
@@ -161,7 +217,8 @@
         function clearData() {
             fileInput.value = '';
             processedData = null;
-            // Force garbage collection for browsers that support it
+            selectedTemplate = null;
+            templateSelect.value = '';
             if (window.gc) {
                 window.gc();
             }
