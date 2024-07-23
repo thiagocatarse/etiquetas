@@ -147,54 +147,79 @@
         }
 
         function generatePDF(backers, template) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({
-                orientation: template.page.orientation,
-                unit: template.page.unit,
-                format: template.page.size
-            });
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+        orientation: template.page.orientation,
+        unit: template.page.unit,
+        format: template.page.size
+    });
 
-            const pageWidth = parseFloat(template.page.size[0]);
-            const pageHeight = parseFloat(template.page.size[1]);
-            const marginTop = parseFloat(template.page['margin-top']);
-            const marginLeft = parseFloat(template.page['margin-left']);
-            const labelWidth = parseFloat(template.tag.width);
-            const labelHeight = parseFloat(template.tag.height);
-            const labelsPerLine = parseInt(template.page.columns);
-            const fontSize = parseFloat(template.page['font-size']);
+    const pageWidth = parseFloat(template.page.size[0]);
+    const pageHeight = parseFloat(template.page.size[1]);
+    const marginTop = parseFloat(template.page['margin-top']);
+    const marginLeft = parseFloat(template.page['margin-left']);
+    const labelWidth = parseFloat(template.tag.width);
+    const labelHeight = parseFloat(template.tag.height);
+    const labelsPerLine = parseInt(template.page.columns);
+    const fontSize = parseFloat(template.page['font-size']);
+    const lineHeight = fontSize * 1.2; // Adjust line height for better readability
 
-            backers.forEach((backer, i) => {
-                if (i > 0 && i % (labelsPerLine * Math.floor((pageHeight - 2 * marginTop) / labelHeight)) === 0) {
-                    doc.addPage();
-                }
+    doc.setFontSize(fontSize);
 
-                const row = Math.floor((i % (labelsPerLine * Math.floor((pageHeight - 2 * marginTop) / labelHeight))) / labelsPerLine);
-                const col = i % labelsPerLine;
-
-                const x = marginLeft + col * labelWidth;
-                const y = marginTop + row * labelHeight;
-
-                if (template.tag.border !== "0") {
-                    doc.rect(x, y, labelWidth, labelHeight);
-                }
-
-                doc.setFontSize(fontSize);
-                
-                let yOffset = 5;
-                doc.text(`Nome: ${backer['Nome completo']}`, x + 2, y + yOffset);
-                yOffset += fontSize / 2;
-
-                const addressLines = splitText(backer.address, Math.floor(labelWidth / (fontSize * 0.6)));
-                addressLines.forEach((line) => {
-                    doc.text(line, x + 2, y + yOffset);
-                    yOffset += fontSize / 2;
-                });
-
-                doc.text(`Recompensa: ${backer['Título da recompensa']}`, x + 2, y + labelHeight - 5);
-            });
-
-            doc.save('shipping_labels.pdf');
+    backers.forEach((backer, i) => {
+        if (i > 0 && i % (labelsPerLine * Math.floor((pageHeight - 2 * marginTop) / labelHeight)) === 0) {
+            doc.addPage();
         }
+
+        const row = Math.floor((i % (labelsPerLine * Math.floor((pageHeight - 2 * marginTop) / labelHeight))) / labelsPerLine);
+        const col = i % labelsPerLine;
+
+        const x = marginLeft + col * labelWidth + parseFloat(template.tag['margin-left']);
+        const y = marginTop + row * labelHeight;
+
+        if (template.tag.border !== "0") {
+            doc.rect(x, y, labelWidth, labelHeight);
+        }
+
+        let yOffset = 5;
+
+        // Function to add a line of text and update yOffset
+        const addLine = (text) => {
+            doc.text(text, x, y + yOffset);
+            yOffset += lineHeight;
+        };
+
+        // Name
+        addLine(`Nome: ${backer['Nome completo']}`);
+
+        // Address
+        const addressParts = [
+            backer['Rua'],
+            backer['Número'],
+            backer['Complemento'],
+            backer['Bairro'],
+            `${backer['Cidade']} - ${backer['Estado']}`,
+            `${backer['País']} - CEP ${backer['CEP']}`
+        ];
+
+        addressParts.forEach(part => {
+            if (part.trim()) {
+                const lines = doc.splitTextToSize(part, labelWidth - 4);
+                lines.forEach(addLine);
+            }
+        });
+
+        // Reward
+        const rewardY = y + labelHeight - 5;
+        const rewardText = `Recompensa: ${backer['Título da recompensa']}`;
+        const rewardLines = doc.splitTextToSize(rewardText, labelWidth - 4);
+        rewardLines.forEach((line, index) => {
+            doc.text(line, x, rewardY - (rewardLines.length - 1 - index) * lineHeight);
+        });
+    });
+
+    doc.save('shipping_labels.pdf');
+}
 
         function splitText(text, maxChars) {
             const words = text.split(' ');
