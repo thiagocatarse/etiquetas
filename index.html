@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerador de Etiquetas Catarse</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: Arial, sans-serif;
             line-height: 1.6;
             margin: 0;
             padding: 20px;
@@ -148,8 +147,7 @@
         }
 
         function wrapText(doc, text, x, y, maxWidth, lineHeight, isBold = false) {
-            if (isBold) doc.setFont('Inter-Bold');
-            else doc.setFont('Inter');
+            doc.setFont(isBold ? "helvetica" : "helvetica", isBold ? "bold" : "normal");
             const lines = doc.splitTextToSize(text, maxWidth);
             lines.forEach((line, i) => {
                 doc.text(line, x, y + (i * lineHeight));
@@ -163,10 +161,6 @@
                 unit: 'mm',
                 format: [210, 297]
             });
-
-            // Add Inter font
-            doc.addFont('https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2', 'Inter', 'normal');
-            doc.addFont('https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hiA.woff2', 'Inter-Bold', 'bold');
 
             const marginTop = 9;
             const marginHorizontal = 4.7;
