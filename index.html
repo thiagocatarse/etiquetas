@@ -1,259 +1,222 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shipping Label Generator</title>
+    <title>Gerador de Etiquetas Catarse</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: auto; }
-        h1 { text-align: center; }
-        #file-input, #template-select { margin: 20px 0; width: 100%; }
-        #generate-btn { display: block; margin: 20px auto; padding: 10px 20px; }
-        #status { text-align: center; color: #666; font-style: italic; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f8f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .logo {
+            width: 120px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .upload-area:hover {
+            background-color: #f0f0f0;
+        }
+        .upload-text {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+        .upload-text:first-child {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        button {
+            background-color: #7cc142;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #6ab033;
+        }
+        #file-name {
+            margin-top: 10px;
+            font-style: italic;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Shipping Label Generator</h1>
-        <select id="template-select">
-            <option value="">Select a template...</option>
-        </select>
-        <input type="file" id="file-input" accept=".csv">
-        <button id="generate-btn">Generate Labels</button>
-        <p id="status"></p>
+        <img src="catarse-logo.png" alt="Catarse Logo" class="logo">
+        <h1>Gerador de etiquetas</h1>
+        <div id="upload-area" class="upload-area">
+            <p class="upload-text">Faça o upload do arquivo CSV</p>
+            <p class="upload-text">Use o arquivo com os nomes de colunas gerado pelo Catarse</p>
+            <p id="file-name"></p>
+        </div>
+        <input type="file" id="csvFile" accept=".csv" required>
+        <button onclick="handleFileUpload()">Gerar etiquetas</button>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const fileInput = document.getElementById('file-input');
-        const templateSelect = document.getElementById('template-select');
-        const generateBtn = document.getElementById('generate-btn');
-        const statusElement = document.getElementById('status');
+        window.jsPDF = window.jspdf.jsPDF;
 
-        let processedData = null;
-        let selectedTemplate = null;
-        let inactivityTimer;
-        const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('csvFile');
+        const fileName = document.getElementById('file-name');
+        let csvFileName = '';
 
-        const templates = [
-            "3080", "3081", "3082", "3180", "3181", "3182", "5580A", "5580M", "5580V", "6080",
-            "6081", "6082", "6083", "6084", "6085", "6086", "6087", "6088", "6089", "6092",
-            "6093", "6094", "6095", "6180", "6181", "6182", "6183", "6184", "6185", "6187",
-            "6280", "6281", "6282", "6283", "6284", "6285", "6286", "6287", "6288", "6293",
-            "7088", "7089", "7188", "8096", "8098", "8099F", "8099L", "8196", "8296", "62580",
-            "62581", "62582", "A4048", "A4049", "A4050", "A4051", "A4054", "A4054R", "A4055",
-            "A4056", "A4056R", "A4060", "A4062", "A4063", "A4063R", "A4067", "A4248", "A4249",
-            "A4250", "A4251", "A4254", "A4255", "A4256", "A4260", "A4261", "A4262", "A4263",
-            "A4264", "A4265", "A4267", "A4268", "A4348", "A4349", "A4350", "A4351", "A4354",
-            "A4355", "A4356", "A4360", "A4361", "A4362", "A4363", "A4364", "A4365", "A4367",
-            "A4368", "BOOP100x40"
-        ];
+        uploadArea.addEventListener('click', () => fileInput.click());
 
-        // Populate template select options
-        templates.forEach(template => {
-            const option = document.createElement('option');
-            option.value = template;
-            option.textContent = template;
-            templateSelect.appendChild(option);
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f0f0f0';
         });
 
-        generateBtn.addEventListener('click', generateLabels);
-        templateSelect.addEventListener('change', loadTemplate);
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.backgroundColor = '';
+        });
 
-        // Set up event listeners for automatic clearing
-        window.addEventListener('beforeunload', clearData);
-        document.addEventListener('mousemove', resetInactivityTimer);
-        document.addEventListener('keypress', resetInactivityTimer);
-
-        function loadTemplate() {
-            const templateId = templateSelect.value;
-            if (!templateId) {
-                setStatus('Please select a template.', 'error');
-                return;
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '';
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileName();
             }
+        });
 
-            fetch(`TEMPLATES/${templateId}.json`)
-                .then(response => response.json())
-                .then(data => {
-                    selectedTemplate = data;
-                    setStatus('Template loaded successfully.', 'success');
-                })
-                .catch(error => {
-                    console.error('Error loading template:', error);
-                    setStatus('Error loading template. Please try again.', 'error');
-                });
-        }
+        fileInput.addEventListener('change', updateFileName);
 
-        function generateLabels() {
-            if (!selectedTemplate) {
-                setStatus('Please select a template first.', 'error');
-                return;
-            }
-
-            const file = fileInput.files[0];
-            if (!file) {
-                setStatus('Please select a CSV file.', 'error');
-                return;
-            }
-
-            Papa.parse(file, {
-                complete: function(results) {
-                    if (validateCSV(results.data)) {
-                        processedData = processCSV(results.data);
-                        generatePDF(processedData, selectedTemplate);
-                        setTimeout(() => {
-                            clearData();
-                            setStatus('Labels generated and data cleared.', 'success');
-                        }, 1000);
-                    } else {
-                        setStatus('Invalid CSV format. Please check your file and try again.', 'error');
-                    }
-                }
-            });
-        }
-
-        function validateCSV(data) {
-            if (data.length < 2) return false; // At least header row and one data row
-
-            const requiredHeaders = ['Nome completo', 'Rua', 'Número', 'Complemento', 'Bairro', 'Cidade', 'Estado', 'País', 'CEP', 'Título da recompensa'];
-            const headers = data[0];
-
-            return requiredHeaders.every(header => headers.includes(header));
-        }
-
-        function processCSV(data) {
-            const headers = data[0];
-            return data.slice(1).map(row => {
-                const backer = {};
-                headers.forEach((header, index) => {
-                    backer[header] = row[index] ? row[index].trim() : '';
-                });
-                return backer;
-            });
-        }
-
-        function generatePDF(backers, template) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({
-        orientation: template.page.orientation,
-        unit: template.page.unit,
-        format: template.page.size
-    });
-
-    const pageWidth = parseFloat(template.page.size[0]);
-    const pageHeight = parseFloat(template.page.size[1]);
-    const marginTop = parseFloat(template.page['margin-top']);
-    const marginLeft = parseFloat(template.page['margin-left']);
-    const labelWidth = parseFloat(template.tag.width);
-    const labelHeight = parseFloat(template.tag.height);
-    const labelsPerLine = parseInt(template.page.columns);
-    let fontSize = parseFloat(template.page['font-size']);
-    let lineHeight = fontSize * 1.1;
-
-    function wrapText(text, maxWidth) {
-        const words = text.split(' ');
-        let lines = [];
-        let currentLine = words[0];
-
-        for (let i = 1; i < words.length; i++) {
-            let width = doc.getStringUnitWidth(currentLine + ' ' + words[i]) * fontSize / doc.internal.scaleFactor;
-            if (width < maxWidth) {
-                currentLine += ' ' + words[i];
+        function updateFileName() {
+            if (fileInput.files[0]) {
+                csvFileName = fileInput.files[0].name;
+                fileName.textContent = `Arquivo selecionado: ${csvFileName}`;
             } else {
-                lines.push(currentLine);
-                currentLine = words[i];
+                csvFileName = '';
+                fileName.textContent = '';
             }
         }
-        lines.push(currentLine);
-        return lines;
-    }
 
-    function addTextToLabel(text, x, y, maxWidth, maxLines) {
-        const lines = wrapText(text, maxWidth);
-        for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
-            doc.text(lines[i], x, y + i * lineHeight);
-        }
-        return Math.min(lines.length, maxLines) * lineHeight;
-    }
-
-    backers.forEach((backer, i) => {
-        // Reset font size for each label
-        fontSize = parseFloat(template.page['font-size']);
-        lineHeight = fontSize * 1.1;
-        doc.setFontSize(fontSize);
-
-        if (i > 0 && i % (labelsPerLine * Math.floor((pageHeight - 2 * marginTop) / labelHeight)) === 0) {
-            doc.addPage();
-        }
-
-        const row = Math.floor((i % (labelsPerLine * Math.floor((pageHeight - 2 * marginTop) / labelHeight))) / labelsPerLine);
-        const col = i % labelsPerLine;
-
-        const x = marginLeft + col * labelWidth + parseFloat(template.tag['margin-left']);
-        const y = marginTop + row * labelHeight;
-
-        if (template.tag.border !== "0") {
-            doc.rect(x, y, labelWidth, labelHeight);
-        }
-
-        let yOffset = 2;
-        let contentHeight = 0;
-
-        // Add name
-        contentHeight += addTextToLabel(`Nome: ${backer['Nome completo']}`, x + 2, y + yOffset, labelWidth - 4, 2);
-
-        // Add address
-        const address = `${backer['Rua']} ${backer['Número']} ${backer['Complemento']} - ${backer['Bairro']} - ${backer['Cidade']} - ${backer['Estado']} - ${backer['País']} - CEP ${backer['CEP']}`;
-        contentHeight += addTextToLabel(address, x + 2, y + yOffset + contentHeight, labelWidth - 4, 5);
-
-        // Add reward right after the address
-        const rewardY = y + yOffset + contentHeight + lineHeight;
-        contentHeight += addTextToLabel(`Recompensa: ${backer['Título da recompensa']}`, x + 2, rewardY, labelWidth - 4, 2);
-
-        // Check if content fits and reduce font size if necessary
-        if (contentHeight > labelHeight - 4) {
-            fontSize *= 0.9;
-            lineHeight = fontSize * 1.1;
-            doc.setFontSize(fontSize);
-            // Here you would ideally recalculate the label content with the new font size
-            // For simplicity, we're not doing that in this example, but in a full implementation, 
-            // you'd want to re-run the text addition with the new font size
-        }
-    });
-
-    doc.save('shipping_labels.pdf');
-}
-
-        function clearData() {
-            fileInput.value = '';
-            processedData = null;
-            selectedTemplate = null;
-            templateSelect.value = '';
-            if (window.gc) {
-                window.gc();
+        function handleFileUpload() {
+            const file = fileInput.files[0];
+            if (file) {
+                Papa.parse(file, {
+                    complete: function(results) {
+                        generateLabels(results.data);
+                    },
+                    header: true
+                });
+            } else {
+                alert('Por favor, selecione um arquivo CSV.');
             }
-            console.log('Data has been cleared from memory.');
         }
 
-        function resetInactivityTimer() {
-            clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(() => {
-                clearData();
-                setStatus('Data cleared due to inactivity.', 'info');
-            }, INACTIVITY_TIMEOUT);
+        function wrapText(doc, text, x, y, maxWidth, lineHeight, isBold = false) {
+            if (isBold) doc.setFont('Inter-Bold');
+            else doc.setFont('Inter');
+            const lines = doc.splitTextToSize(text, maxWidth);
+            lines.forEach((line, i) => {
+                doc.text(line, x, y + (i * lineHeight));
+            });
+            return lines.length;
         }
 
-        function setStatus(message, type) {
-            statusElement.textContent = message;
-            statusElement.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : '#666';
-        }
+        function generateLabels(data) {
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [210, 297]
+            });
 
-        // Initial setup of inactivity timer
-        resetInactivityTimer();
-    });
+            // Add Inter font
+            doc.addFont('https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2', 'Inter', 'normal');
+            doc.addFont('https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hiA.woff2', 'Inter-Bold', 'bold');
+
+            const marginTop = 9;
+            const marginHorizontal = 4.7;
+            const verticalGap = 55.8;
+            const horizontalGap = 100.16;
+            const labelHeight = 55.8;
+            const labelWidth = 99;
+            const labelsPerLine = 2;
+            const linesPerPage = 5;
+
+            let currentLabel = 0;
+
+            data.forEach((row) => {
+                if (currentLabel > 0 && currentLabel % (labelsPerLine * linesPerPage) === 0) {
+                    doc.addPage();
+                }
+
+                const row_num = Math.floor((currentLabel % (labelsPerLine * linesPerPage)) / labelsPerLine);
+                const col = currentLabel % labelsPerLine;
+
+                const x = marginHorizontal + col * (labelWidth + horizontalGap - labelWidth);
+                const y = marginTop + row_num * verticalGap;
+
+                doc.rect(x, y, labelWidth, labelHeight);
+                doc.setFontSize(9);
+
+                const rewardTitle = row['Título da recompensa'] || '';
+                const fullName = row['Nome completo'] || '';
+                const addressLine1 = `${row['Rua'] || ''} ${row['Número'] || ''} ${row['Complemento'] || ''}`;
+                const addressLine2 = `${row['Bairro'] || ''} - ${row['Cidade'] || ''} - ${row['Estado'] || ''} - ${row['País'] || ''}`;
+                const cep = row['CEP'] || '';
+
+                let currentY = y + 5;
+                const lineHeight = 3.5;
+                const maxWidth = labelWidth - 4;
+
+                currentY += wrapText(doc, `Produto: ${rewardTitle}`, x + 2, currentY, maxWidth, lineHeight, true) * lineHeight;
+                currentY += lineHeight * 2; // Double line space
+                currentY += wrapText(doc, 'DESTINATÁRIO', x + 2, currentY, maxWidth, lineHeight, true) * lineHeight;
+                currentY += wrapText(doc, fullName, x + 2, currentY, maxWidth, lineHeight, true) * lineHeight;
+                currentY += wrapText(doc, addressLine1, x + 2, currentY, maxWidth, lineHeight) * lineHeight;
+                currentY += wrapText(doc, addressLine2, x + 2, currentY, maxWidth, lineHeight) * lineHeight;
+                wrapText(doc, `CEP: ${cep}`, x + 2, currentY, maxWidth, lineHeight);
+
+                currentLabel++;
+            });
+
+            const pdfFileName = `etiquetas_${csvFileName.replace('.csv', '')}.pdf`;
+            doc.save(pdfFileName);
+        }
     </script>
 </body>
 </html>
