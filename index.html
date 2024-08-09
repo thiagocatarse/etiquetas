@@ -1,216 +1,479 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gerador de Etiquetas Catarse</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background-color: #f8f8f8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 500px;
-            width: 100%;
-            background-color: #fff;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        .logo {
-            width: 120px;
-            margin-bottom: 20px;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 24px;
-        }
-        .upload-area {
-            border: 2px dashed #ccc;
-            border-radius: 8px;
-            padding: 30px;
-            margin-bottom: 20px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .upload-area:hover {
-            background-color: #f0f0f0;
-        }
-        .upload-text {
-            color: #666;
-            margin-bottom: 15px;
-            font-size: 12px;
-        }
-        .upload-text:first-child {
-            font-weight: bold;
-            font-size: 14px;
-        }
-        input[type="file"] {
-            display: none;
-        }
-        button {
-            background-color: #7cc142;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #6ab033;
-        }
-        #file-name {
-            margin-top: 10px;
-            font-style: italic;
-            font-size: 12px;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 20px;
+        background-color: #f8f8f8;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 600px;
+        width: 100%;
+        background-color: #fff;
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .logo {
+        width: 120px;
+        margin-bottom: 20px;
+      }
+      h1,
+      h2 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+      h1 {
+        margin-bottom: 40px;
+      }
+      h2 {
+        font-size: 20px;
+        margin-top: 40px;
+        margin-bottom: 20px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      .error input {
+        border-color: #e74c3c;
+      }
+      .error-message {
+        color: #e74c3c;
+        font-size: 12px;
+        margin-top: 5px;
+      }
+      .upload-area {
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        padding: 30px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .upload-area:hover {
+        background-color: #f0f0f0;
+      }
+      .upload-text {
+        color: #666;
+        margin-bottom: 15px;
+        font-size: 12px;
+      }
+      .upload-text:first-child {
+        font-weight: bold;
+        font-size: 14px;
+      }
+      input[type="file"] {
+        display: none;
+      }
+      button {
+        background-color: #7cc142;
+        color: white;
+        padding: 15px 30px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 18px;
+        transition: background-color 0.3s;
+        margin-top: 30px;
+        width: 100%;
+      }
+      button:hover {
+        background-color: #6ab033;
+      }
+      #file-name {
+        margin-top: 10px;
+        font-style: italic;
+        font-size: 12px;
+      }
+      .checkbox-container {
+        margin-top: 10px;
+        text-align: left;
+      }
+      .checkbox-container label {
+        display: flex;
+        align-items: center;
+        font-size: 14px;
+        color: #333;
+      }
+      .checkbox-container input[type="checkbox"] {
+        margin-right: 10px;
+      }
+      .section {
+        margin-bottom: 40px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <img src="catarse-logo.png" alt="Catarse Logo" class="logo">
-        <h1>Gerador de etiquetas</h1>
+      <img src="catarse-logo.png" alt="Catarse Logo" class="logo" />
+      <h1>Gerador de etiquetas</h1>
+
+      <div class="section">
+        <h2>Dados do remetente</h2>
+
+        <form id="senderForm">
+          <div class="form-group">
+            <label for="nome">Nome completo</label>
+            <input type="text" id="nome" name="nome" required />
+            <div class="error-message"></div>
+          </div>
+          <div class="form-group">
+            <label for="cep">CEP</label>
+            <input type="text" id="cep" name="cep" required />
+            <div class="error-message"></div>
+          </div>
+          <div class="form-group">
+            <label for="complemento">Nº e Complemento</label>
+            <input type="text" id="complemento" name="complemento" required />
+            <div class="error-message"></div>
+          </div>
+          <div class="form-group">
+            <label for="endereco">Endereço completo</label>
+            <input type="text" id="endereco" name="endereco" readonly />
+          </div>
+          <div class="form-group">
+            <label for="cidade">Cidade</label>
+            <input type="text" id="cidade" name="cidade" readonly />
+          </div>
+        </form>
+      </div>
+
+      <div class="section">
+        <h2>Dados dos apoiadores</h2>
+
         <div id="upload-area" class="upload-area">
-            <p class="upload-text">Faça o upload do arquivo CSV</p>
-            <p class="upload-text">Use o arquivo com os nomes de colunas gerado pelo Catarse</p>
-            <p id="file-name"></p>
+          <p class="upload-text">Faça o upload do arquivo CSV</p>
+          <p class="upload-text">
+            Use o arquivo com os nomes de colunas gerado pelo Catarse
+          </p>
+          <p id="file-name"></p>
         </div>
-        <input type="file" id="csvFile" accept=".csv" required>
-        <button onclick="handleFileUpload()">Gerar etiquetas</button>
+        <input type="file" id="csvFile" accept=".csv" required />
+      </div>
+
+      <div class="section">
+        <h2>Opções</h2>
+
+        <div class="checkbox-container">
+          <label>
+            <input type="checkbox" id="showReward" checked />
+            Exibir nome da recompensa na etiqueta
+          </label>
+        </div>
+      </div>
+
+      <button onclick="handleFileUpload()">Gerar etiquetas</button>
     </div>
 
     <script>
-        window.jsPDF = window.jspdf.jsPDF;
+      window.jsPDF = window.jspdf.jsPDF;
 
-        const uploadArea = document.getElementById('upload-area');
-        const fileInput = document.getElementById('csvFile');
-        const fileName = document.getElementById('file-name');
-        let csvFileName = '';
+      const uploadArea = document.getElementById("upload-area");
+      const fileInput = document.getElementById("csvFile");
+      const fileName = document.getElementById("file-name");
+      const showRewardCheckbox = document.getElementById("showReward");
+      let csvFileName = "";
 
-        uploadArea.addEventListener('click', () => fileInput.click());
+      // CEP mask
+      $("#cep").mask("00000-000");
 
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.style.backgroundColor = '#f0f0f0';
+      // Form validation
+      const form = document.getElementById("senderForm");
+      const fields = ["nome", "cep", "complemento"];
+
+      fields.forEach((field) => {
+        const input = document.getElementById(field);
+        input.addEventListener("blur", () => validateField(field));
+      });
+
+      function validateField(field) {
+        const input = document.getElementById(field);
+        const errorElement = input.nextElementSibling;
+        let isValid = true;
+
+        if (input.value.trim() === "") {
+          showError(input, errorElement, "Esse campo é obrigatório");
+          isValid = false;
+        } else if (field === "cep" && !isValidCEP(input.value)) {
+          showError(input, errorElement, "CEP inválido");
+          isValid = false;
+        } else {
+          hideError(input, errorElement);
+        }
+
+        return isValid;
+      }
+
+      function showError(input, errorElement, message) {
+        input.parentElement.classList.add("error");
+        errorElement.textContent = message;
+      }
+
+      function hideError(input, errorElement) {
+        input.parentElement.classList.remove("error");
+        errorElement.textContent = "";
+      }
+
+      function isValidCEP(cep) {
+        return /^\d{5}-\d{3}$/.test(cep);
+      }
+
+      // CEP auto-fill
+      document.getElementById("cep").addEventListener("blur", function () {
+        const cep = this.value.replace("-", "");
+        if (cep.length === 8) {
+          fetch(`https://viacep.com.br/ws/${cep}/json/`)
+            .then((response) => response.json())
+            .then((data) => {
+              if (!data.erro) {
+                document.getElementById(
+                  "endereco"
+                ).value = `${data.logradouro} - ${data.bairro}`;
+                document.getElementById(
+                  "cidade"
+                ).value = `${data.localidade} - ${data.uf}`;
+              }
+            });
+        }
+      });
+
+      uploadArea.addEventListener("click", () => fileInput.click());
+
+      uploadArea.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        uploadArea.style.backgroundColor = "#f0f0f0";
+      });
+
+      uploadArea.addEventListener("dragleave", () => {
+        uploadArea.style.backgroundColor = "";
+      });
+
+      uploadArea.addEventListener("drop", (e) => {
+        e.preventDefault();
+        uploadArea.style.backgroundColor = "";
+        if (e.dataTransfer.files.length) {
+          fileInput.files = e.dataTransfer.files;
+          updateFileName();
+        }
+      });
+
+      fileInput.addEventListener("change", updateFileName);
+
+      function updateFileName() {
+        if (fileInput.files[0]) {
+          csvFileName = fileInput.files[0].name;
+          fileName.textContent = `Arquivo selecionado: ${csvFileName}`;
+        } else {
+          csvFileName = "";
+          fileName.textContent = "";
+        }
+      }
+
+      function handleFileUpload() {
+        if (!validateForm()) {
+          alert(
+            "Por favor, preencha todos os campos obrigatórios corretamente."
+          );
+          return;
+        }
+
+        const file = fileInput.files[0];
+        if (file) {
+          Papa.parse(file, {
+            complete: function (results) {
+              generateLabels(results.data);
+            },
+            header: true,
+          });
+        } else {
+          alert("Por favor, selecione um arquivo CSV.");
+        }
+      }
+
+      function validateForm() {
+        return fields.every((field) => validateField(field));
+      }
+
+      function wrapText(doc, text, x, y, maxWidth, lineHeight, isBold = false) {
+        doc.setFont(
+          isBold ? "helvetica" : "helvetica",
+          isBold ? "bold" : "normal"
+        );
+        const lines = doc.splitTextToSize(text, maxWidth);
+        lines.forEach((line, i) => {
+          doc.text(line, x, y + i * lineHeight);
+        });
+        return lines.length;
+      }
+
+      function generateLabels(data) {
+        const doc = new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: [210, 297],
         });
 
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.style.backgroundColor = '';
+        const marginTop = 9;
+        const marginHorizontal = 4.7;
+        const verticalGap = 55.8;
+        const horizontalGap = 100.16;
+        const labelHeight = 55.8;
+        const labelWidth = 99;
+        const labelsPerLine = 2;
+        const linesPerPage = 5;
+
+        let currentLabel = 0;
+
+        const senderName = document.getElementById("nome").value;
+        const senderAddress = document.getElementById("endereco").value;
+        const senderComplement = document.getElementById("complemento").value;
+        const senderCity = document.getElementById("cidade").value;
+        const senderCep = document.getElementById("cep").value;
+
+        data.forEach((row) => {
+          if (
+            currentLabel > 0 &&
+            currentLabel % (labelsPerLine * linesPerPage) === 0
+          ) {
+            doc.addPage();
+          }
+
+          const row_num = Math.floor(
+            (currentLabel % (labelsPerLine * linesPerPage)) / labelsPerLine
+          );
+          const col = currentLabel % labelsPerLine;
+
+          const x =
+            marginHorizontal + col * (labelWidth + horizontalGap - labelWidth);
+          const y = marginTop + row_num * verticalGap;
+
+          doc.rect(x, y, labelWidth, labelHeight);
+          doc.setFontSize(9);
+
+          const rewardTitle = row["Título da recompensa"] || "";
+          const fullName = row["Nome completo"] || "";
+          const addressLine1 = `${row["Rua"] || ""} ${row["Número"] || ""} ${
+            row["Complemento"] || ""
+          }`;
+          const addressLine2 = `${row["Bairro"] || ""} - ${
+            row["Cidade"] || ""
+          } - ${row["Estado"] || ""} - ${row["País"] || ""}`;
+          const cep = row["CEP"] || "";
+
+          let currentY = y + 5;
+          const lineHeight = 3.5;
+          const maxWidth = labelWidth - 4;
+
+          if (showRewardCheckbox.checked) {
+            currentY +=
+              wrapText(
+                doc,
+                `Recompensa: ${rewardTitle}`,
+                x + 2,
+                currentY,
+                maxWidth,
+                lineHeight,
+                true
+              ) * lineHeight;
+            currentY += lineHeight * 2; // Double line space
+          }
+
+          currentY +=
+            wrapText(
+              doc,
+              "DESTINATÁRIO",
+              x + 2,
+              currentY,
+              maxWidth,
+              lineHeight,
+              true
+            ) * lineHeight;
+          currentY +=
+            wrapText(
+              doc,
+              fullName,
+              x + 2,
+              currentY,
+              maxWidth,
+              lineHeight,
+              true
+            ) * lineHeight;
+          currentY +=
+            wrapText(doc, addressLine1, x + 2, currentY, maxWidth, lineHeight) *
+            lineHeight;
+          currentY +=
+            wrapText(doc, addressLine2, x + 2, currentY, maxWidth, lineHeight) *
+            lineHeight;
+          currentY +=
+            wrapText(
+              doc,
+              `CEP: ${cep}`,
+              x + 2,
+              currentY,
+              maxWidth,
+              lineHeight
+            ) * lineHeight;
+
+          // Add double line space
+          currentY += lineHeight * 2;
+
+          // Add sender information with smaller font and condensed format
+          doc.setFontSize(7);
+          currentY +=
+            wrapText(
+              doc,
+              "REMETENTE",
+              x + 2,
+              currentY,
+              maxWidth,
+              lineHeight,
+              true
+            ) * lineHeight;
+          currentY +=
+            wrapText(doc, senderName, x + 2, currentY, maxWidth, lineHeight) *
+            lineHeight;
+          wrapText(
+            doc,
+            `${senderAddress} - ${senderComplement} ${senderCity} - Brasil - ${senderCep}`,
+            x + 2,
+            currentY,
+            maxWidth,
+            lineHeight
+          );
+
+          currentLabel++;
         });
 
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.style.backgroundColor = '';
-            if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                updateFileName();
-            }
-        });
-
-        fileInput.addEventListener('change', updateFileName);
-
-        function updateFileName() {
-            if (fileInput.files[0]) {
-                csvFileName = fileInput.files[0].name;
-                fileName.textContent = `Arquivo selecionado: ${csvFileName}`;
-            } else {
-                csvFileName = '';
-                fileName.textContent = '';
-            }
-        }
-
-        function handleFileUpload() {
-            const file = fileInput.files[0];
-            if (file) {
-                Papa.parse(file, {
-                    complete: function(results) {
-                        generateLabels(results.data);
-                    },
-                    header: true
-                });
-            } else {
-                alert('Por favor, selecione um arquivo CSV.');
-            }
-        }
-
-        function wrapText(doc, text, x, y, maxWidth, lineHeight, isBold = false) {
-            doc.setFont(isBold ? "helvetica" : "helvetica", isBold ? "bold" : "normal");
-            const lines = doc.splitTextToSize(text, maxWidth);
-            lines.forEach((line, i) => {
-                doc.text(line, x, y + (i * lineHeight));
-            });
-            return lines.length;
-        }
-
-        function generateLabels(data) {
-            const doc = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: [210, 297]
-            });
-
-            const marginTop = 9;
-            const marginHorizontal = 4.7;
-            const verticalGap = 55.8;
-            const horizontalGap = 100.16;
-            const labelHeight = 55.8;
-            const labelWidth = 99;
-            const labelsPerLine = 2;
-            const linesPerPage = 5;
-
-            let currentLabel = 0;
-
-            data.forEach((row) => {
-                if (currentLabel > 0 && currentLabel % (labelsPerLine * linesPerPage) === 0) {
-                    doc.addPage();
-                }
-
-                const row_num = Math.floor((currentLabel % (labelsPerLine * linesPerPage)) / labelsPerLine);
-                const col = currentLabel % labelsPerLine;
-
-                const x = marginHorizontal + col * (labelWidth + horizontalGap - labelWidth);
-                const y = marginTop + row_num * verticalGap;
-
-                doc.rect(x, y, labelWidth, labelHeight);
-                doc.setFontSize(9);
-
-                const rewardTitle = row['Título da recompensa'] || '';
-                const fullName = row['Nome completo'] || '';
-                const addressLine1 = `${row['Rua'] || ''} ${row['Número'] || ''} ${row['Complemento'] || ''}`;
-                const addressLine2 = `${row['Bairro'] || ''} - ${row['Cidade'] || ''} - ${row['Estado'] || ''} - ${row['País'] || ''}`;
-                const cep = row['CEP'] || '';
-
-                let currentY = y + 5;
-                const lineHeight = 3.5;
-                const maxWidth = labelWidth - 4;
-
-                currentY += wrapText(doc, `Produto: ${rewardTitle}`, x + 2, currentY, maxWidth, lineHeight, true) * lineHeight;
-                currentY += lineHeight * 2; // Double line space
-                currentY += wrapText(doc, 'DESTINATÁRIO', x + 2, currentY, maxWidth, lineHeight, true) * lineHeight;
-                currentY += wrapText(doc, fullName, x + 2, currentY, maxWidth, lineHeight, true) * lineHeight;
-                currentY += wrapText(doc, addressLine1, x + 2, currentY, maxWidth, lineHeight) * lineHeight;
-                currentY += wrapText(doc, addressLine2, x + 2, currentY, maxWidth, lineHeight) * lineHeight;
-                wrapText(doc, `CEP: ${cep}`, x + 2, currentY, maxWidth, lineHeight);
-
-                currentLabel++;
-            });
-
-            const pdfFileName = `etiquetas_${csvFileName.replace('.csv', '')}.pdf`;
-            doc.save(pdfFileName);
-        }
+        const pdfFileName = `etiquetas_${csvFileName.replace(".csv", "")}.pdf`;
+        doc.save(pdfFileName);
+      }
     </script>
-</body>
+  </body>
 </html>
