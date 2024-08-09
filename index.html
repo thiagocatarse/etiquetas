@@ -308,7 +308,8 @@
         if (file) {
           Papa.parse(file, {
             complete: function (results) {
-              generateLabels(results.data);
+              const sortedData = sortData(results.data);
+              generateLabels(sortedData);
             },
             header: true,
           });
@@ -319,6 +320,24 @@
 
       function validateForm() {
         return fields.every((field) => validateField(field));
+      }
+
+      function sortData(data) {
+        return data.sort((a, b) => {
+          // Primary sort: Título da recompensa
+          const rewardA = (a["Título da recompensa"] || "").toLowerCase();
+          const rewardB = (b["Título da recompensa"] || "").toLowerCase();
+          if (rewardA < rewardB) return -1;
+          if (rewardA > rewardB) return 1;
+
+          // Secondary sort: ZIP code (CEP) of the destination
+          const zipA = (a["CEP"] || "").replace(/\D/g, ""); // Remove non-digit characters
+          const zipB = (b["CEP"] || "").replace(/\D/g, "");
+          if (zipA < zipB) return -1;
+          if (zipA > zipB) return 1;
+
+          return 0;
+        });
       }
 
       function wrapText(doc, text, x, y, maxWidth, lineHeight, isBold = false) {
