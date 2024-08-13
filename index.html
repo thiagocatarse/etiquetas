@@ -353,20 +353,28 @@
       }
 
       function generateLabels(data) {
+        const template = {
+          pTop_folha: 0.9,
+          pLeft_folha: 0.47,
+          pBottom_folha: 0,
+          pRight_folha: 0,
+          mTop_etiqueta: 0.0,
+          mBottom_etiqueta: 0.0,
+          mLeft_etiqueta: 0.26,
+          mRight_etiqueta: 0.26,
+          h_etiqueta: 5.58,
+          w_etiqueta: 9.9,
+          qtd_coluna: 2,
+          qtd_linha: 5,
+          h_folha: 29.7,
+          w_folha: 21.0,
+        };
+
         const doc = new jsPDF({
           orientation: "portrait",
-          unit: "mm",
-          format: [210, 297],
+          unit: "cm",
+          format: [template.w_folha, template.h_folha],
         });
-
-        const marginTop = 9;
-        const marginHorizontal = 4.7;
-        const verticalGap = 55.8;
-        const horizontalGap = 100.16;
-        const labelHeight = 55.8;
-        const labelWidth = 99;
-        const labelsPerLine = 2;
-        const linesPerPage = 5;
 
         let currentLabel = 0;
 
@@ -379,22 +387,36 @@
         data.forEach((row) => {
           if (
             currentLabel > 0 &&
-            currentLabel % (labelsPerLine * linesPerPage) === 0
+            currentLabel % (template.qtd_coluna * template.qtd_linha) === 0
           ) {
             doc.addPage();
           }
 
           const row_num = Math.floor(
-            (currentLabel % (labelsPerLine * linesPerPage)) / labelsPerLine
+            (currentLabel % (template.qtd_coluna * template.qtd_linha)) /
+              template.qtd_coluna
           );
-          const col = currentLabel % labelsPerLine;
+          const col = currentLabel % template.qtd_coluna;
 
           const x =
-            marginHorizontal + col * (labelWidth + horizontalGap - labelWidth);
-          const y = marginTop + row_num * verticalGap;
+            template.pLeft_folha +
+            col *
+              (template.w_etiqueta +
+                template.mLeft_etiqueta +
+                template.mRight_etiqueta);
+          const y =
+            template.pTop_folha +
+            row_num *
+              (template.h_etiqueta +
+                template.mTop_etiqueta +
+                template.mBottom_etiqueta);
 
-          doc.rect(x, y, labelWidth, labelHeight);
+          // Change the border color to white
+          doc.setDrawColor(255, 255, 255); // Set drawing color to white
+          doc.rect(x, y, template.w_etiqueta, template.h_etiqueta);
+
           doc.setFontSize(9);
+          doc.setTextColor(0); // Set text color back to black
 
           const rewardTitle = row["Título da recompensa"] || "";
           const fullName = row["Nome completo"] || "";
@@ -406,16 +428,16 @@
           } - ${row["Estado"] || ""} - ${row["País"] || ""}`;
           const cep = row["CEP"] || "";
 
-          let currentY = y + 5;
-          const lineHeight = 3.5;
-          const maxWidth = labelWidth - 4;
+          let currentY = y + 0.5;
+          const lineHeight = 0.35;
+          const maxWidth = template.w_etiqueta - 0.4;
 
           if (showRewardCheckbox.checked) {
             currentY +=
               wrapText(
                 doc,
                 `Recompensa: ${rewardTitle}`,
-                x + 2,
+                x + 0.2,
                 currentY,
                 maxWidth,
                 lineHeight,
@@ -428,7 +450,7 @@
             wrapText(
               doc,
               "DESTINATÁRIO",
-              x + 2,
+              x + 0.2,
               currentY,
               maxWidth,
               lineHeight,
@@ -438,23 +460,35 @@
             wrapText(
               doc,
               fullName,
-              x + 2,
+              x + 0.2,
               currentY,
               maxWidth,
               lineHeight,
               true
             ) * lineHeight;
           currentY +=
-            wrapText(doc, addressLine1, x + 2, currentY, maxWidth, lineHeight) *
-            lineHeight;
+            wrapText(
+              doc,
+              addressLine1,
+              x + 0.2,
+              currentY,
+              maxWidth,
+              lineHeight
+            ) * lineHeight;
           currentY +=
-            wrapText(doc, addressLine2, x + 2, currentY, maxWidth, lineHeight) *
-            lineHeight;
+            wrapText(
+              doc,
+              addressLine2,
+              x + 0.2,
+              currentY,
+              maxWidth,
+              lineHeight
+            ) * lineHeight;
           currentY +=
             wrapText(
               doc,
               `CEP: ${cep}`,
-              x + 2,
+              x + 0.2,
               currentY,
               maxWidth,
               lineHeight
@@ -469,19 +503,19 @@
             wrapText(
               doc,
               "REMETENTE",
-              x + 2,
+              x + 0.2,
               currentY,
               maxWidth,
               lineHeight,
               true
             ) * lineHeight;
           currentY +=
-            wrapText(doc, senderName, x + 2, currentY, maxWidth, lineHeight) *
+            wrapText(doc, senderName, x + 0.2, currentY, maxWidth, lineHeight) *
             lineHeight;
           wrapText(
             doc,
             `${senderAddress} - ${senderComplement} ${senderCity} - Brasil - ${senderCep}`,
-            x + 2,
+            x + 0.2,
             currentY,
             maxWidth,
             lineHeight
